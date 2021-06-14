@@ -70,11 +70,10 @@ bool isPositiveInt(char* input){ //determine whether input is a positive integer
 }
 
 void swap(int& A,int& B){
-	if(A != B){
-		A = A ^ B;
-		B = A ^ B;
-		A = A ^ B;
-	}
+	
+	A = A ^ B;
+	B = A ^ B;
+	A = A ^ B;
 }
 
 int GCD(int A,int B){ //count the GCD of A and B by Euclidean Algorithm
