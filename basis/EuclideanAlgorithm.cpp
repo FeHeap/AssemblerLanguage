@@ -16,7 +16,7 @@ int main(void){
     while(true)
 	{
     	cout << "The first number:";
-    	cin >> input;
+    	cin.getline(input,29);
     	if(isPositiveInt(input)){
 			break;
 		}
@@ -29,7 +29,7 @@ int main(void){
 	while(true)
 	{
     	cout << "The second number:";
-    	cin >> input;
+    	cin.getline(input,29);
     	if(isPositiveInt(input)){
 			break;
 		}
