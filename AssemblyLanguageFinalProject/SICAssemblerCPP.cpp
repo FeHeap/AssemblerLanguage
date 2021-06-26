@@ -408,27 +408,14 @@ class pass1StringProcess{
 };
 
 
-
+void setOpCode();
 void pass1();
 void showIntermediate();
 void pass2();
 
 int main(void){
 
-	ifstream OpCode;
-    OpCode.open(OPCodeFileName,ios::in);
-    if(OpCode.is_open()){
-    	char charArrayBuf[15];
-    	while(!OpCode.eof()){
-			OpCode.getline(charArrayBuf,15,'\n');
-			opcTable.put(charArrayBuf);
-		}
-    	OpCode.close();
-	}
-	else{
-		cout << "Fail to open the file OpCode!" << endl;
-		exit(0);
-	}
+	setOpCode();
 
 	pass1();
 	
@@ -443,8 +430,25 @@ int main(void){
     return 0;
 }
 
+void setOpCode(){
+	ifstream OpCode;
+    OpCode.open(OPCodeFileName,ios::in);
+    if(OpCode.is_open()){
+    	char charArrayBuf[15];
+    	while(!OpCode.eof()){
+			OpCode.getline(charArrayBuf,15,'\n');
+			opcTable.put(charArrayBuf);
+		}
+    	OpCode.close();
+	}
+	else{
+		cout << "Fail to open the file OpCode!" << endl;
+		exit(0);
+	}
+}
+
 void pass1(){
-	int lineCounter = 0;
+	int lineCounter;
 	char instructionBuf[maxLineLen+1];
 	Source.open(SourceFileName,ios::in);
 	Intermediate.open(IntermediateFileName,ios::out);
