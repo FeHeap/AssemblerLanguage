@@ -29,6 +29,7 @@ void freeOptable();
 void freeOpUnit(struct opcUnit*);
 int hashcode(char*,int);
 void pushOP(char*,char*);
+char* getOPvalue(char*);
 
 void pass1();
 void setsymbolTable();
@@ -43,6 +44,7 @@ void clearBuf(char*,char*,char*);
 void showSymbles();
 
 void pass2();
+void getAll(char*,char*,char*,char*,char*);
 
 /*main function*/
 int main(void){
@@ -162,6 +164,17 @@ int exist(char* opc){
 		point = point->next;
 	}
 	return 0;
+}
+
+char* getOPvalue(char* opcode){
+	int index = hashcode(opcode,mapSize);
+	struct opcUnit* point = *(opTable + index);
+	while(1){
+		if(!stricmp(point->opc,opcode)){
+			return point->value;
+		}
+		point = point->next;
+	}
 }
 //------>About opcode
 
@@ -375,6 +388,57 @@ void pass1(){
 	fclose(output);
 }
 
+void getAll(char* instruction,char* location,char* varible_d,char* opc,char* varible_u){
+	if(instruction[4] == '\t'&&instruction[5] == '\t'){
+		int i = 0,j = 0;
+		for(;instruction[i] != '\t'&&instruction[i] != ' ';i++,j++){
+			location[j] = instruction[i];
+		}
+		location[j] = '\0';
+		varible_d[0] = '\0';
+		i = 6,j = 0;
+		for(;instruction[i]!='\t'&&instruction[i]!=' ';i++,j++){
+			opc[j] = instruction[i];
+		}
+		opc[j] = '\0';
+		for(;instruction[i] =='\t'||instruction[i]==' ';i++);
+		j = 0;
+		for(;instruction[i]!='\t'&&instruction[i]!=' '&&instruction[i]!='\0';i++,j++){
+			varible_u[j] = instruction[i];
+		}
+		varible_u[j] = '\0';
+	}
+	else{
+		int i = 0,j = 0;
+		for(;i < 4;i++,j++){
+			location[j] = instruction[i];
+		}
+		location[j] = '\0';
+		
+		i = 5,j = 0;
+		for(;instruction[i]!='\t'&&instruction[i]!=' ';i++,j++){
+			varible_d[j] = instruction[i];
+		}
+		varible_d[j] = '\0';
+		
+		for(;instruction[i] =='\t'||instruction[i]==' ';i++);
+		
+		j = 0;
+		for(;instruction[i]!='\t'&&instruction[i]!=' ';i++,j++){
+			opc[j] = instruction[i];
+		}
+		opc[j] = '\0';
+		
+		for(;instruction[i] =='\t'||instruction[i]==' ';i++);
+		
+		j = 0;
+		for(;instruction[i]!='\t'&&instruction[i]!=' '&&instruction[i]!='\0';i++,j++){
+			varible_u[j] = instruction[i];
+		}
+		varible_u[j] = '\0';
+	}
+}
+
 void pass2(){
 	input = fopen(intermediateFileName,"r");
 	char location[5];
@@ -391,7 +455,44 @@ void pass2(){
    	chBuf = fgetc(input);
     do{
     	fscanf(input,"%[^\n]",instruction);
-    	printf("%s\n",instruction);
+    	
+    	getAll( instruction, location, varible_d, opc, varible_u);
+		if(instruction[0] == '\t')
+    		break;
+    	if(strlen(varible_u) < 8){
+    		printf("%s\t\t",instruction);
+		}
+    	else{
+    		printf("%s\t",instruction);
+		}
+    	
+    	if(exist(opc)){
+			printf("%s\n",getOPvalue(opc));
+		}
+		else{
+			/*int i;
+			for(i = 0;i < 4;i++){
+				if(!stricmp(BWtabke[i],opc))
+					break;
+			}
+			switch (i){
+				case 0:
+					if(varible_u[0] == 'X'||varible_u[0] == 'x'){
+						return 1;
+					}else if(varible_u[0] == 'C'||varible_u[0] == 'c'){
+						return 3;
+					}
+				case 1:
+					return 3;
+				case 2:
+					return sDtoD(varible_u);
+				case 3:
+					return 3*sDtoD(varible_u);
+				default:
+					return -1;
+			}*/
+			printf("\n");
+		}
     	instruction[0] = '\0';
 	}while((chBuf = fgetc(input)) != EOF);
 	
