@@ -109,12 +109,12 @@ class opcProcess{
 		}	
 }opcTable;
 
-class symbleProcess{
+class symbolProcess{
 	
 	private:
 		
 		struct TableUnit{
-			char symble[maxVarLen+1];
+			char symbol[maxVarLen+1];
 			int line;
 			struct TableUnit *next;
 		}*table;
@@ -137,7 +137,7 @@ class symbleProcess{
 		
 	public:
 		
-		symbleProcess(){
+		symbolProcess(){
 			table = new struct TableUnit[numOfEngAlph];
 			for(int i  = 0; i < numOfEngAlph; i++){
 				table[i].line = -1;
@@ -145,7 +145,7 @@ class symbleProcess{
 			}
 		}
 		
-		~symbleProcess(){
+		~symbolProcess(){
 			for(int i = 0; i < numOfEngAlph; i++){
 				if(table[i].next != NULL)
 					freeLink(table[i].next);
@@ -153,36 +153,36 @@ class symbleProcess{
 			delete [] table;
 		}
 		
-		bool put(char* symble,int line){ //duplicate varible declare return true, else return false
-			if(table[(symble[0] - 'A')%numOfEngAlph].line == -1){
-				strcpy(table[(symble[0] - 'A')%numOfEngAlph].symble,symble);
-				table[(symble[0] - 'A')%numOfEngAlph].line = line;
+		bool put(char* symbol,int line){ //duplicate varible declare return true, else return false
+			if(table[(symbol[0] - 'A')%numOfEngAlph].line == -1){
+				strcpy(table[(symbol[0] - 'A')%numOfEngAlph].symbol,symbol);
+				table[(symbol[0] - 'A')%numOfEngAlph].line = line;
 				return false;
 			}
 			else{
-				struct TableUnit* point = &table[(symble[0] - 'A')%numOfEngAlph];
+				struct TableUnit* point = &table[(symbol[0] - 'A')%numOfEngAlph];
 				while(point->next != NULL){
-					if(!strcmp(point->symble,symble)){
+					if(!strcmp(point->symbol,symbol)){
 						return true;
 					}
 					point = point -> next;
 				}
-				if(!strcmp(point->symble,symble)){
+				if(!strcmp(point->symbol,symbol)){
 					return true;
 				}
 				point -> next = new struct TableUnit;
 				point = point -> next;
-				strcpy(point -> symble,symble);
+				strcpy(point -> symbol,symbol);
 				point -> line = line;
 				point -> next = NULL;
 				return false;
 			}	
 		}
 		
-		int codeValue(char *symble){ //when find the symble retrun the position it is, else return -1
-			struct TableUnit* point = &table[(symble[0] - 'A')%numOfEngAlph];
+		int codeValue(char *symbol){ //when find the symbol retrun the position it is, else return -1
+			struct TableUnit* point = &table[(symbol[0] - 'A')%numOfEngAlph];
 			while(point != NULL){
-				if(!stricmp(point -> symble,symble)){
+				if(!stricmp(point -> symbol,symbol)){
 					return point -> line;
 				}
 				else{
@@ -192,19 +192,19 @@ class symbleProcess{
 			return -1;
 		}
 		
-		void viewSymbles(){
-			cout << "Symble Table:\n" << endl;
+		void viewSymbols(){
+			cout << "Symbol Table:\n" << endl;
 			for(int i = 0; i < numOfEngAlph;i++){
 				if(table[i].line != -1){
 					struct TableUnit* point = &table[i];
 					while(point != NULL){
-						printf("%s\t%02X\n",point->symble,point->line);
+						printf("%s\t%02X\n",point->symbol,point->line);
 						point = point->next;
 					}
 				}	
 			}
 		}
-}symbleTable;
+}symbolTable;
 
 class FSMofInst{
 	private:
@@ -376,31 +376,31 @@ class pass1StringProcess{
 			}
 			return num;
 		}
-		static bool countAndCheck(int &lineCounter,char* op,char* value){
+		static bool countAndCheck(int &locationCounter,char* op,char* value){
 			if(opcTable.codeValue(op) == -1){
 				if(!stricmp("BYTE",op) && strlen(value) != 0){
 					if(value[0] == 'X'||value[0] == 'x'){
-						lineCounter += 1;
+						locationCounter += 1;
 					}
 					else if(value[0] == 'C'||value[0] == 'c'){
-						lineCounter += 3;
+						locationCounter += 3;
 					}
 				}
 				else if(!stricmp("WORD",op) && strlen(value) != 0){
-					lineCounter += 3;
+					locationCounter += 3;
 				}
 				else if(!stricmp("RESB",op) && strlen(value) != 0){
-					lineCounter += 1*chars10ToInt(value);
+					locationCounter += 1*chars10ToInt(value);
 				}
 				else if(!stricmp("RESW",op) && strlen(value) != 0){
-					lineCounter += 3*chars10ToInt(value);
+					locationCounter += 3*chars10ToInt(value);
 				}
 				else{
 					return true;
 				}
 			}
 			else{
-				lineCounter += 3;
+				locationCounter += 3;
 			}
 			return false;
 		}
@@ -419,10 +419,9 @@ int main(void){
 
 	pass1();
 	
-	symbleTable.viewSymbles();
+	symbolTable.viewSymbols();
 	cout << "\n\n" << endl;
 	showIntermediate();
-	
 	
 	pass2();
 
@@ -448,7 +447,7 @@ void setOpCode(){
 }
 
 void pass1(){
-	int lineCounter;
+	int locationCounter;
 	char instructionBuf[maxLineLen+1];
 	Source.open(SourceFileName,ios::in);
 	Intermediate.open(IntermediateFileName,ios::out);
@@ -470,11 +469,11 @@ void pass1(){
 		}
 		pass1StringProcess::disOneLine(instructionBuf,var,op,value);
 		if(!stricmp(op,"START")){
-			lineCounter = pass1StringProcess::chars16ToInt(value);
-			Intermediate << pass1StringProcess::IntTochars16_L(lineCounter) << "\t" << var << "\t" << op << "\t" << value << endl;
+			locationCounter = pass1StringProcess::chars16ToInt(value);
+			Intermediate << pass1StringProcess::IntTochars16_L(locationCounter) << "\t" << var << "\t" << op << "\t" << value << endl;
 		}
 		else{
-			lineCounter = 0;
+			locationCounter = 0;
 			Source.close();
 			Source.open(SourceFileName,ios::in);
 		}
@@ -489,7 +488,7 @@ void pass1(){
 		pass1StringProcess::disOneLine(instructionBuf,var,op,value);
 		if(!stricmp(op,"END"))
 			break;
-		Intermediate << pass1StringProcess::IntTochars16_L(lineCounter) << "\t" << var << "\t" << op << "\t" << value << endl;
+		Intermediate << pass1StringProcess::IntTochars16_L(locationCounter) << "\t" << var << "\t" << op << "\t" << value << endl;
 		if(var[0] != '\0'){
 			if(!((var[0] >= 'A'&&var[0]<='Z')||var[0] == '_'||var[0] == '?'||var[0] =='$')||strlen(var) > maxVarLen){
 				cout << "valid varible declaration!" << endl;
@@ -504,8 +503,8 @@ void pass1(){
 				remove(IntermediateFileName);
 				exit(0);
 			}
-			else if(symbleTable.codeValue(var) == -1){
-				symbleTable.put(var,lineCounter);
+			else if(symbolTable.codeValue(var) == -1){
+				symbolTable.put(var,locationCounter);
 			}
 			else{
 				cout << "duplicate varible declaration!" << endl;
@@ -515,7 +514,7 @@ void pass1(){
 				exit(0);
 			}
 		}
-		if(pass1StringProcess::countAndCheck(lineCounter, op, value)){
+		if(pass1StringProcess::countAndCheck(locationCounter, op, value)){
 			cout << "valid instruction!" << endl;
 			Source.close();
 			Intermediate.close();
