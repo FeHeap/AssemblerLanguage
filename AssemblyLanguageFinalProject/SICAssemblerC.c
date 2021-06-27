@@ -46,6 +46,17 @@ void showSymbles();
 void pass2();
 void getAll(char*,char*,char*,char*,char*);
 char* getSP(char*);
+void opcfprintfProcess(char*,char*,char*);
+struct link{
+	int position;
+	char varible_d[20];
+	char opc[10];
+	char varible_u[20];
+	struct link* next;
+}*front,*rear;
+void addq(char*,char*,char*,char*);
+void deleteq();
+void deleteAllq();
 
 /*main function*/
 int main(void){
@@ -59,6 +70,7 @@ int main(void){
     
 	freeOptable();
 	freeSymbolTable();
+	deleteAllq();
     system("PAUSE");
     return 0;
 }
@@ -250,6 +262,7 @@ char* getSP(char* symbol){
 	printf("the varible doesn't exist'!\n");
 	freeOptable();
 	freeSymbolTable();
+	deleteAllq();
 	exit(0);
 }
 
@@ -325,12 +338,13 @@ int ADD(char* opc,char* varible_u){
 }
 
 char program[30] = {};
+int start;
 int programEnd;
 int programLength;
 
 void pass1(){
 	int LC;
-	int start;
+	
 	setsymbolTable();
 	if((input = fopen(sourceFileName,"r")) == NULL){
 		printf("Fail to open source!");
@@ -463,8 +477,97 @@ void getAll(char* instruction,char* location,char* varible_d,char* opc,char* var
 	}
 }
 
+void addq(char* location,char* varible_d,char* opc,char* varible_u){
+	if(front == NULL){
+		front = rear = (struct link*)malloc(sizeof(struct link));
+		rear->position = sXtoD(location);
+		strcpy(rear->varible_d,varible_d);
+		strcpy(rear->opc,opc);
+		strcpy(rear->varible_u,varible_u);
+		rear->next = NULL;
+	}
+	else{
+		rear->next = (struct link*)malloc(sizeof(struct link));
+		rear = rear->next;
+		rear->position = sXtoD(location);
+		strcpy(rear->varible_d,varible_d);
+		strcpy(rear->opc,opc);
+		strcpy(rear->varible_u,varible_u);
+		rear->next = NULL;
+	}
+}
+
+void deleteq(){
+	struct link* temp = front;
+	front = front->next;
+	free(temp);
+}
+void deleteAllq(){
+	if(front != NULL){
+		deleteq();
+	}
+}
+
+void opcfprintfProcess(char* varible_d,char* opc,char* varible_u){
+	if(exist(opc)){
+		fprintf(output,"%s",getOPvalue(opc));
+		if(strlen(varible_u) == 0){
+			fprintf(output,"0000");
+		}
+		else if(varible_u[strlen(varible_u)-2] == ','&&(varible_u[strlen(varible_u)-1] == 'X'||varible_u[strlen(varible_u)-1] == 'x')){
+			char varible_u_buf[20];
+			strcpy(varible_u_buf,varible_u);
+			varible_u_buf[strlen(varible_u_buf)-2] = '\0';
+			char positionBuf[20];
+			strcpy(positionBuf,getSP(varible_u_buf));
+			int i;
+			for(i = 0;i < 8;i++){
+				if(positionBuf[0] <= '8'){
+						positionBuf[0] += 1;
+				}
+				else if(positionBuf[0] == '9'){
+					positionBuf[0] = 'A';
+				}
+				else{
+					positionBuf[0] += 1;
+					}
+			}
+			
+			fprintf(output,"%s",positionBuf);
+		}
+			else{
+			fprintf(output,"%s",getSP(varible_u));
+		}
+	}
+	else{
+		int i;
+		for(i = 0;i < 4;i++){
+			if(!stricmp(BWtabke[i],opc))
+				break;
+		}
+		switch (i){
+			case 0:
+					if(varible_u[0] == 'X'||varible_u[0] == 'x'){
+					fprintf(output,"%c%c",varible_u[2],varible_u[3]);
+				}else if(varible_u[0] == 'C'||varible_u[0] == 'c'){
+					fprintf(output,"%02X%02X%02X",varible_u[2],varible_u[3],varible_u[4]);
+				}
+				break;
+			case 1:
+					fprintf(output,"%06X",sDtoD(varible_u));
+				break;
+			case 2:
+			case 3:
+			default:
+				break;
+		}
+	}
+	
+}
+
 void pass2(){
 	input = fopen(intermediateFileName,"r");
+	output = fopen(LLSO,"w");
 	char location[5];
 	char Buf[50];
 	char chBuf;
@@ -474,9 +577,12 @@ void pass2(){
     char instruction[100];
     
     fscanf(input,"%[^\n]",instruction);
-   	printf("%s\n",instruction);
+   	fprintf(output,"%s\n",instruction);
    	instruction[0] = '\0';
    	chBuf = fgetc(input);
+   	
+   	front = NULL;
+   	rear = NULL;
    	
     do{
     	fscanf(input,"%[^\n]",instruction);
@@ -485,71 +591,58 @@ void pass2(){
 		if(instruction[0] == '\t')
     		break;
     	if(strlen(varible_u) < 8){
-    		printf("%s\t\t",instruction);
+    		fprintf(output,"%s\t\t",instruction);
 		}
     	else{
-    		printf("%s\t",instruction);
+    		fprintf(output,"%s\t",instruction);
 		}
+		
+		if(stricmp(opc,"RESW")&&stricmp(opc,"RESB")){
+			addq(location,varible_d,opc,varible_u);
+		}
+    	opcfprintfProcess(varible_d,opc,varible_u);
     	
-    	if(exist(opc)){
-			printf("%s",getOPvalue(opc));
-			if(strlen(varible_u) == 0){
-				printf("0000\n");
-			}
-			else if(varible_u[strlen(varible_u)-2] == ','&&(varible_u[strlen(varible_u)-1] == 'X'||varible_u[strlen(varible_u)-1] == 'x')){
-				char varible_u_buf[20];
-				strcpy(varible_u_buf,varible_u);
-				varible_u_buf[strlen(varible_u_buf)-2] = '\0';
-				char positionBuf[20];
-				strcpy(positionBuf,getSP(varible_u_buf));
-				int i;
-				for(i = 0;i < 8;i++){
-					if(positionBuf[0] <= '8'){
-						positionBuf[0] += 1;
-					}
-					else if(positionBuf[0] == '9'){
-						positionBuf[0] = 'A';
-					}
-					else{
-						positionBuf[0] += 1;
-					}
-				}
-				
-				printf("%s\n",positionBuf);
-			}
-			else{
-				printf("%s\n",getSP(varible_u));
-			}
-		}
-		else{
-			int i;
-			for(i = 0;i < 4;i++){
-				if(!stricmp(BWtabke[i],opc))
-					break;
-			}
-			switch (i){
-				case 0:
-					if(varible_u[0] == 'X'||varible_u[0] == 'x'){
-						printf("%c%c\n",varible_u[2],varible_u[3]);
-					}else if(varible_u[0] == 'C'||varible_u[0] == 'c'){
-						printf("%02X%02X%02X\n",varible_u[2],varible_u[3],varible_u[4]);
-					}
-					break;
-				case 1:
-					printf("%06X\n",sDtoD(varible_u));
-					break;
-				case 2:
-					printf("\n");
-					break;
-				case 3:
-					printf("\n");
-					break;
-				default:
-					break;
-			}
-		}
+		fprintf(output,"\n");
     	instruction[0] = '\0';
 	}while((chBuf = fgetc(input)) != EOF);
 	
-	printf("%s\n",instruction);	
+	fprintf(output,"%s\n",instruction);
+	
+	fclose(input);
+	fclose(output);
+	
+	output = fopen(objcodeFileName,"w");
+	fprintf(output,"H%s\t%06X %06X",program,start,programLength);
+	int sum = 0;
+	int len = 0;
+	struct link* point = front;
+	int ST = front->position;
+	fprintf(output,"\nT%06X",point->position);
+	for(;point->next != NULL;point = point->next){
+		sum = point->position - ST;
+		if(sum > 27){
+			fprintf(output," %02X",len);
+			while(front != point){
+				fprintf(output," ");
+				opcfprintfProcess(front->varible_d,front->opc,front->varible_u);
+				deleteq();
+			}
+			
+			ST = front->position;
+			point = front;
+			len = 0;
+			fprintf(output,"\nT%06X",point->position);
+		}
+		len += ADD(point->opc,point->varible_u);
+	}
+	len += ADD(point->opc,point->varible_u);
+	fprintf(output," %02X",len);
+	while(front != NULL){
+		fprintf(output," ");
+		opcfprintfProcess(front->varible_d,front->opc,front->varible_u);
+		deleteq();
+	}
+	fprintf(output,"\nE%06X",start);
+	
+	fclose(output);
 }
