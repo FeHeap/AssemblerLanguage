@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 #define opcodeFileName "opcode.txt"
-#define sourceFileName "source(comment&blank).txt"
+#define sourceFileName "source.txt"
 #define intermediateFileName "intermediate.txt"
 #define LLSO "LLSO.txt"
 #define objcodeFileName "objcode.txt"
@@ -253,7 +253,7 @@ char* getSP(char* symbol){
 	int index = hashcode(symbol,symbolTableSize);
 	struct symbolUnit* point = *(symbolTable + index);
 	while(point != NULL){
-		if(!stricmp(point->symbol,symbol)){  //­n°µ¨¾§b 
+		if(!stricmp(point->symbol,symbol)){
 			return point->position;
 		}
 		point = point->next;

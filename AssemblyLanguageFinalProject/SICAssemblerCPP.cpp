@@ -8,10 +8,15 @@
 #define OPCodeFileName "opcode.txt"
 #define SourceFileName "source(comment&blank).txt"
 #define IntermediateFileName "Intermediate.txt"
+#define OutcomeFileName "outcome.txt"
+#define ObjectCodeFileName "objectcode.txt" 
 using namespace std;
 ifstream  Source;
 fstream Intermediate;
 ofstream ObjCode, Outcome;
+
+int startAddress,programLength;
+char programName[40];
 
 class opcProcess{
 	
@@ -341,9 +346,7 @@ class pass1StringProcess{
 		static char* opGet(char* oneLine){
 			
 		}
-		static char* valueGet(char* oneLine){
-			
-		}
+		
 		static void disOneLine(char* oneLine,char* var,char* op,char* value){
 			FSM.reset();
 			FSM.process(oneLine);
@@ -407,6 +410,306 @@ class pass1StringProcess{
 	
 };
 
+class pass2StringProcess{
+	public:
+		static char* valueGet(char* oneLine){
+			char value[maxLineLen+1];
+			FSM.reset();
+			FSM.process(oneLine);
+			FSM.setVal(value);
+			return value;
+		}
+		static char* opGet(char* oneLine){
+			char op[8];
+			FSM.reset();
+			FSM.process(oneLine);
+			FSM.setOp(op);
+			return op;
+		}
+		
+		
+		static char* opLocation(char* oneLine){
+			char location[5];
+			for(int i = 0;i < 4;i++){
+				location[i] = oneLine[i];
+			}
+			location[4] = '\0';
+			return location;
+		}
+		static void count(int &locationCounter,char* op,char* value){
+			if(opcTable.codeValue(op) == -1){
+				if(!stricmp("BYTE",op)){
+					if(value[0] == 'X'||value[0] == 'x'){
+						locationCounter += 1;
+					}
+					else if(value[0] == 'C'||value[0] == 'c'){
+						locationCounter += 3;
+					}
+				}
+				else if(!stricmp("WORD",op)){
+					locationCounter += 3;
+				}
+				else if(!stricmp("RESB",op)){
+					locationCounter += 1*pass1StringProcess::chars10ToInt(value);
+				}
+				else if(!stricmp("RESW",op)){
+					locationCounter += 3*pass1StringProcess::chars10ToInt(value);
+				}
+			}
+			else{
+				locationCounter += 3;
+			}
+		}
+		static char* IntTochars16_2(int num){
+			char charArray[3];
+			charArray[2] = '\0'; 
+			for(int i = 1; i >= 0; i--){
+				charArray[i] = (num%16 < 10)?'0'+num%16:'A'-10+num%16;
+				num /= 16;
+			}
+			return charArray;
+		}
+		static char* IntTochars16_6(int num){
+			char charArray[7];
+			charArray[6] = '\0'; 
+			for(int i = 5; i >= 0; i--){
+				charArray[i] = (num%16 < 10)?'0'+num%16:'A'-10+num%16;
+				num /= 16;
+			}
+			return charArray;
+		}
+};
+
+class objectCodeProcess{
+	private:
+		struct instructions{
+			char* instruction;
+			int location;
+		}*pocket;
+		
+		int top;
+		int basicSize;
+		
+	public:
+		objectCodeProcess(){
+			top = 0;
+			basicSize = 10;
+			pocket = new instructions[basicSize];
+		}
+		~objectCodeProcess(){
+			for(int i = 0;i<top;i++){
+				delete [] pocket[i].instruction;
+			}
+			delete [] pocket;
+		}
+		
+		static void	objDispoay(char* instruction){
+			char var[maxVarLen+1];
+			char op[8];
+			char value[maxVarLen+1];
+			pass1StringProcess::disOneLine(instruction,var,op,value);
+			if(opcTable.codeValue(op) != -1){
+				cout << pass2StringProcess::IntTochars16_2(opcTable.codeValue(op));
+				
+				bool Xflag = false;
+				if(value[strlen(value)-2] == ',' && (value[strlen(value)-1] == 'X'||value[strlen(value)-1] == 'x')){
+					value[strlen(value)-2] = '\0';
+					Xflag = true;
+				}
+				int val = symbolTable.codeValue(value);
+				if(val == -1&&strlen(value) != 0){
+					cout << "The varible being used does not exist!" << endl;
+					Intermediate.close();
+					Outcome.close();
+					remove(IntermediateFileName);
+					remove(OutcomeFileName);
+					exit(0);
+				}
+				else if(val == -1&&strlen(value) == 0){
+					val = 0;
+				}
+				if(Xflag){
+					val += 0x8000;
+				}
+				printf("%04X",val);
+			}
+			else{
+				if(!stricmp("BYTE",op)){
+					if(value[0] == 'X'||value[0] == 'x'){
+						printf("%c%c",value[2],value[3]);
+					}
+					else if(value[0] == 'C'||value[0] == 'c'){
+						printf("%02X%02X%02X",value[2],value[3],value[4]);
+					}
+				}
+				else if(!stricmp("WORD",op)){
+					printf("%06X",pass1StringProcess::chars10ToInt(value));
+				}
+				else if(!stricmp("RESB",op)){
+					//pass
+				}
+				else if(!stricmp("RESW",op)){
+					//pass
+				}
+			
+			}
+		}
+		static void	fobjDispoay(char* instruction,ofstream &fout){
+			char var[maxVarLen+1];
+			char op[8];
+			char value[maxVarLen+1];
+			pass1StringProcess::disOneLine(instruction,var,op,value);
+			if(opcTable.codeValue(op) != -1){
+				fout << pass2StringProcess::IntTochars16_2(opcTable.codeValue(op));
+				
+				bool Xflag = false;
+				if(value[strlen(value)-2] == ',' && (value[strlen(value)-1] == 'X'||value[strlen(value)-1] == 'x')){
+					value[strlen(value)-2] = '\0';
+					Xflag = true;
+				}
+				int val = symbolTable.codeValue(value);
+				if(val == -1&&strlen(value) != 0){
+					fout << "The varible being used does not exist!" << endl;
+					Intermediate.close();
+					Outcome.close();
+					remove(IntermediateFileName);
+					remove(OutcomeFileName);
+					exit(0);
+				}
+				else if(val == -1&&strlen(value) == 0){
+					val = 0;
+				}
+				if(Xflag){
+					val += 0x8000;
+				}
+				fout << pass1StringProcess::IntTochars16_L(val);
+			}
+			else{
+				if(!stricmp("BYTE",op)){
+					if(value[0] == 'X'||value[0] == 'x'){
+						fout << value[2] << value[3];
+					}
+					else if(value[0] == 'C'||value[0] == 'c'){
+						char buf0[] = {value[2],'\0'};
+						char buf1[] = {value[3],'\0'};
+						char buf2[] = {value[4],'\0'};
+						fout << pass2StringProcess::IntTochars16_2(value[2]) << pass2StringProcess::IntTochars16_2(value[3]) << pass2StringProcess::IntTochars16_2(value[4]);
+					}
+				}
+				else if(!stricmp("WORD",op)){
+					fout << pass2StringProcess::IntTochars16_6(pass1StringProcess::chars10ToInt(value));
+				}
+				else if(!stricmp("RESB",op)){
+					//pass
+				}
+				else if(!stricmp("RESW",op)){
+					//pass
+				}
+			
+			}
+		} 
+		static char* getInstruction(char* oneLine){
+			char lineBuf[maxLineLen+1];
+			int j = 0;
+			for(int i = 5;oneLine[i] != '\0';i++,j++){
+				lineBuf[j] = oneLine[i];
+			}
+			lineBuf[j] = '\0';
+			return lineBuf;
+		}
+		void push(char* instruction,int location){
+			if(top == basicSize){
+				struct instructions* temp = pocket;
+				basicSize *= 2;
+				pocket = new instructions[basicSize];
+				for(int i = 0;i < top;i++){
+					(pocket+i)->instruction = (temp+i)->instruction;
+					(pocket+i)->location = (temp+i)->location;
+				}
+				delete [] temp;
+			}
+			pocket[top].instruction = instruction;
+			pocket[top].location = location;
+			
+			top++;
+		}
+		
+		void outputToFile(){
+			ObjCode.open(ObjectCodeFileName,ios::out);
+			
+			ObjCode << "H" << programName << "\t" << pass2StringProcess::IntTochars16_6(startAddress) ;
+			ObjCode << " " << pass2StringProcess::IntTochars16_6(programLength) << endl;
+			int sum = 0;
+			int start = pocket[0].location;
+			int startIndex = 0;
+			int len = 0;
+			char instructionBuf[maxLineLen+1];
+			int i, j;
+			for(i = 0;i < top;i++){
+				sum = pocket[i].location - start;
+				if(sum > 27){
+					ObjCode << "T" << pass2StringProcess::IntTochars16_6(start);
+					ObjCode << " " << pass2StringProcess::IntTochars16_2(len) << " ";
+					for(j = startIndex;j<i;j++){
+						fobjDispoay(pocket[j].instruction,ObjCode);
+						ObjCode << " ";
+					}
+					ObjCode << endl;
+					start = pocket[i].location;
+					startIndex = i;
+					len = 0;
+				}
+				strcpy(instructionBuf,pocket[i].instruction);
+				pass2StringProcess::count(len,pass2StringProcess::opGet(instructionBuf),pass2StringProcess::valueGet(instructionBuf));
+			}
+			
+			ObjCode << "T" << pass2StringProcess::IntTochars16_6(start);
+			ObjCode << " " << pass2StringProcess::IntTochars16_2(len) << " ";
+			for(j = startIndex;j<i;j++){
+				fobjDispoay(pocket[j].instruction,ObjCode);
+				ObjCode << " ";
+			}
+			ObjCode << endl;
+			ObjCode << "E" << pass2StringProcess::IntTochars16_6(startAddress) << endl;
+			ObjCode.close();
+		}
+		
+		void output(){
+
+			printf("H%s\t%06X %06X\n",programName,startAddress,programLength);
+			
+			int sum = 0;
+			int start = pocket[0].location;
+			int startIndex = 0;
+			int len = 0;
+			char instructionBuf[maxLineLen+1];
+			int i, j;
+			for(i = 0;i < top;i++){
+				sum = pocket[i].location - start;
+				if(sum > 27){
+					printf("T%06X %02X ",start,len);
+					for(j = startIndex;j<i;j++){
+						objDispoay(pocket[j].instruction);
+						printf(" ");
+					}
+					printf("\n");
+					start = pocket[i].location;
+					startIndex = i;
+					len = 0;
+				}
+				strcpy(instructionBuf,pocket[i].instruction);
+				pass2StringProcess::count(len,pass2StringProcess::opGet(instructionBuf),pass2StringProcess::valueGet(instructionBuf));
+			}
+			
+			printf("T%06X %02X ",start,len);
+			for(j = startIndex;j<i;j++){
+				objDispoay(pocket[j].instruction);
+				printf(" ");
+			}
+			printf("\n");
+			printf("E%06X\n",startAddress);
+		}
+}objTable;
 
 void setOpCode();
 void pass1();
@@ -460,7 +763,7 @@ void pass1(){
 	}
 	char var[maxVarLen+1];
 	char op[8];
-	char value[15];
+	char value[maxVarLen+1];
 	
 	while(!Source.eof()){ //the first line
 		Source.getline(instructionBuf,maxLineLen,'\n');
@@ -469,11 +772,13 @@ void pass1(){
 		}
 		pass1StringProcess::disOneLine(instructionBuf,var,op,value);
 		if(!stricmp(op,"START")){
-			locationCounter = pass1StringProcess::chars16ToInt(value);
+			strcpy(programName,var);
+			startAddress = locationCounter = pass1StringProcess::chars16ToInt(value);
 			Intermediate << pass1StringProcess::IntTochars16_L(locationCounter) << "\t" << var << "\t" << op << "\t" << value << endl;
 		}
 		else{
-			locationCounter = 0;
+			programName[0] = '\0';
+			startAddress = locationCounter = 0;
 			Source.close();
 			Source.open(SourceFileName,ios::in);
 		}
@@ -525,6 +830,7 @@ void pass1(){
 	}
 	
 	Intermediate << "\t" << var << "\t" << op << "\t" << value << endl; //END line
+	programLength = locationCounter - startAddress;
 	
 	Source.close();
 	Intermediate.close();
@@ -541,5 +847,31 @@ void showIntermediate(){
 }
 
 void pass2(){
+	Intermediate.open(IntermediateFileName,ios::in);
+	Outcome.open(OutcomeFileName,ios::out);
+	
+	char* opBuf;
+	while(!Intermediate.eof()){
+		char charArrayBuf[maxLineLen+1];
+		Intermediate.getline(charArrayBuf,maxLineLen,'\n');
+		if(strlen(pass2StringProcess::valueGet(objectCodeProcess::getInstruction(charArrayBuf))) < 8){
+			Outcome << charArrayBuf << "\t\t";
+		}
+		else{
+			Outcome << charArrayBuf << "\t";
+		}
+		char* instructionBuf = new char[maxLineLen+1];
+		strcpy(instructionBuf,objectCodeProcess::getInstruction(charArrayBuf));
+		opBuf = pass2StringProcess::opGet(instructionBuf);
+		if(stricmp("RESW",opBuf) && stricmp("RESB",opBuf) && stricmp("START",opBuf) && stricmp("END",opBuf)){
+			objTable.push(instructionBuf,pass1StringProcess::chars16ToInt(pass2StringProcess::opLocation(charArrayBuf)));
+		}
+		objectCodeProcess::fobjDispoay(instructionBuf,Outcome);
+		Outcome << endl;
+	}
+	Outcome.close();
+	Intermediate.close();
 	remove(IntermediateFileName);
+	objTable.outputToFile();
+	objTable.output();
 }
