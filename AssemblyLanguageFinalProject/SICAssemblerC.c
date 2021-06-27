@@ -7,9 +7,11 @@
 #define intermediateFileName "intermediate.txt"
 #define LLSO "LLSO.txt"
 #define objcodeFileName "objcode.txt"
-#define symbolTableSize 100
-int mapSize;
+#define symbolTableSize 100 //the number of the buckets in symbolTable
 
+
+
+int mapSize; //the number of the buckets in opTable
 
 FILE *input,*output;
 struct opcUnit{
@@ -24,39 +26,40 @@ struct symbolUnit{
 	struct symbolUnit* next;
 }**symbolTable;
 
-void setopTable();
-void freeOptable();
-void freeOpUnit(struct opcUnit*);
-int hashcode(char*,int);
-void pushOP(char*,char*);
-char* getOPvalue(char*);
+void setopTable();					//store the opcode in opTable(hash map, deal with the hash collision by linked list)
+void freeOptable();					//to free the opTable
+void freeOpUnit(struct opcUnit*);	//to free the links in the bucket(in opTable)
+int hashcode(char*,int);			//Output hash code(not greater than the size of map)
+void pushOP(char*,char*);			//push the opcode into opTable
+char* getOPvalue(char*);			//according the opcode to search the opTable to get the value
 
-void pass1();
-void setsymbolTable();
-int pushSYM();
-void freeSymbolTable();
-void freeSymbolUnit(struct symbolUnit*);
-int sXtoD(char*);
-int DXtoD(char*);
-char* DtosX(int);
-int ADD(char*,char*);
-void clearBuf(char*,char*,char*);
-void showSymbles();
+void pass1();								//the 1st pass of the 2-pass assembler
+void setsymbolTable(); 						//initial the symbolTable(hash map, deal with the hash collision by linked list)
+int pushSYM(); 								//push the symbol into the symbolTable
+void freeSymbolTable(); 					//to free the symbol table
+void freeSymbolUnit(struct symbolUnit*); 	//to free links int the bucket(in symbolTable)
+int sXtoD(char*);							//transform the string(Hexadecimal) into the integer(Decimal)
+int sDtoD(char*); 							//transform the string(Decimal) into the integer(Decimal)
+char* DtosX(int); 							//transform the integer(Decimal) into the string(Hexadecimal)
+int ADD(char*,char*); 						//according to the opc and varible_u deciding the size of the instruction
+void clearBuf(char*,char*,char*); 			//to clear the stringBufs to ""
+void showSymbles(); 						//to show the whole symbolTable
 
-void pass2();
-void getAll(char*,char*,char*,char*,char*);
-char* getSP(char*);
-void opcfprintfProcess(char*,char*,char*);
-struct link{
+void pass2();								//the 2nd pass of the 2-pass assembler
+void getAll(char*,char*,char*,char*,char*);	//get all the information of one line in intermediate file separately
+char* getSP(char*);							//get the position of the symbol
+void opcfprintfProcess(char*,char*,char*);	//according to varible_d, opc, varible_u to decide what the objcode the instruction will be
+
+struct link{							//to store the information of instruction for the output to objcode file
 	int position;
-	char varible_d[20];
-	char opc[10];
-	char varible_u[20];
+	char varible_d[20]; //varible be declared
+	char opc[10];		//opcode
+	char varible_u[20];	//varible be used or imm
 	struct link* next;
 }*front,*rear;
-void addq(char*,char*,char*,char*);
-void deleteq();
-void deleteAllq();
+void addq(char*,char*,char*,char*);		//add the infromation to the queue for the output to objcode file
+void deleteq();							//delete queue
+void deleteAllq();						//free the whole queue
 
 /*main function*/
 int main(void){
@@ -75,7 +78,7 @@ int main(void){
     return 0;
 }
 
-int hashcode(char* string, int Size){
+int hashcode(char* string, int Size){	//according to the input $string to decide the hashcode(not greater than the input $Size)
 	int i;
 	int hash = 0;
 	int len = strlen(string)-1;
@@ -167,7 +170,7 @@ void setsymbolTable(){
 
 }
 
-int exist(char* opc){
+int exist(char* opc){					//to detect whether the input $opc is valid, if is's valid return 1, else return 0
 	int index = hashcode(opc,mapSize);
 	struct opcUnit* point = *(opTable + index);
 	while(point != NULL){
@@ -179,7 +182,7 @@ int exist(char* opc){
 	return 0;
 }
 
-char* getOPvalue(char* opcode){
+char* getOPvalue(char* opcode){		//according the input $opcode to searching the opTable to return the value
 	int index = hashcode(opcode,mapSize);
 	struct opcUnit* point = *(opTable + index);
 	while(1){
@@ -192,7 +195,7 @@ char* getOPvalue(char* opcode){
 //------>About opcode
 
 //<------About symbol
-int pushSYM(char* symbol,char* position){
+int pushSYM(char* symbol,char* position){	//to push the varible into table, but if the varible has been declared before then return 1, else return 0;
 	int index = hashcode(symbol,symbolTableSize);
 	struct symbolUnit* point;
 	if(*(symbolTable + index) == NULL){
@@ -269,7 +272,7 @@ char* getSP(char* symbol){
 //------>About symbol
 
 //<------About translation
-int sXtoD(char* sX){
+int sXtoD(char* sX){	//transform the string(Hexadecimal) into the integer(Decimal)
 	int i;
 	int num;
 	for(num = 0,i = 0;i < strlen(sX);i++){
@@ -278,7 +281,7 @@ int sXtoD(char* sX){
 	}
 	return num;
 }
-int sDtoD(char* sD){
+int sDtoD(char* sD){	//transform the string(Decimal) into the integer(Decimal)
 	int i;
 	int num;
 	for(num = 0,i = 0;i < strlen(sD);i++){
@@ -288,7 +291,7 @@ int sDtoD(char* sD){
 	return num;
 }
 
-char* DtosX(int D){
+char* DtosX(int D){		//transform the integer(Decimal) into the string(Hexadecimal)
 	char sX[5];
 	int i;	
 	for(i = 0;i < 4;i++){
@@ -306,16 +309,16 @@ void clearBuf(char* varible_d,char* opc,char* varible_u){
 	varible_u[0] = '\0';
 }
 
-char BWtabke[][5] = {"BYTE","WORD","RESB","RESW"};
+char ReservedWordOfByteWord[][5] = {"BYTE","WORD","RESB","RESW"};
 
-int ADD(char* opc,char* varible_u){
+int ADD(char* opc,char* varible_u){	//according the input $opc, $varible_u to return the size of the instruction, but if the $opc is valid return -1
 	if(exist(opc)){
 		return 3;
 	}
 	else{
 		int i;
 		for(i = 0;i < 4;i++){
-			if(!stricmp(BWtabke[i],opc))
+			if(!stricmp(ReservedWordOfByteWord[i],opc))
 				break;
 		}
 		switch (i){
@@ -337,13 +340,14 @@ int ADD(char* opc,char* varible_u){
 	}	
 }
 
-char program[30] = {};
-int start;
-int programEnd;
-int programLength;
+char program[30] = {};	//the Name of the program
+int start;				//the start position of the program
+int programEnd;			//the end of the program
+int programLength;		//the length of the program
 
+/*pass1*/
 void pass1(){
-	int LC;
+	int LC;		//location counter
 	
 	setsymbolTable();
 	if((input = fopen(sourceFileName,"r")) == NULL){
@@ -357,8 +361,7 @@ void pass1(){
 	char varible_d[20];
     char opc[10];
     char varible_u[20];
-    do{
-		
+    do{		//read the first valid line
     	fscanf(input,"%[^ \t;\n]",varible_d);
     	fscanf(input,"%[ \t]",Buf);
     	fscanf(input,"%[^ \t;\n]",opc);
@@ -367,12 +370,12 @@ void pass1(){
     	fscanf(input,"%[^\n]",Buf);
 	}while((chBuf = fgetc(input)) != EOF&&strlen(opc) == 0);
 	
-	if(!stricmp(opc,"START")){
+	if(!stricmp(opc,"START")){	//if the START Location has been set in the program, set the $LC
 		strcpy(program,varible_d);
 		start = LC = sXtoD(varible_u);
 		fprintf(output,"%04X\t%s\t%s\t%s\n",LC,varible_d,opc,varible_u);
 	}
-	else{
+	else{						//if not, set the $LC to 0 and reopen the file 
 		LC = 0;
 		fclose(input);
 		input = fopen(sourceFileName,"r");
@@ -391,7 +394,7 @@ void pass1(){
     	if(!stricmp("END",opc)){
     		break;
 		}
-    	if(strlen(opc) != 0){
+    	if(strlen(opc) != 0){	//if the line is valid, fprint in to intermediate file
     		fprintf(output,"%04X\t%s\t%s\t%s\n",LC,varible_d,opc,varible_u);
 		}
 		else{
@@ -399,7 +402,7 @@ void pass1(){
 		}
 		
 		if(strlen(varible_d) != 0){
-			if(pushSYM(varible_d,DtosX(LC))){
+			if(pushSYM(varible_d,DtosX(LC))){	//detect the bug of duplicate varible declaration
 				printf("The varible has already exist!\n");
 				freeOptable();
 				freeSymbolTable();
@@ -408,7 +411,7 @@ void pass1(){
 		}
 
 		int add = ADD(opc,varible_u);
-		if(add == -1){
+		if(add == -1){	//detect bug of invalid opcode
 			printf("invalid instruction!\n");
 			freeOptable();
 			freeSymbolTable();
@@ -535,26 +538,26 @@ void opcfprintfProcess(char* varible_d,char* opc,char* varible_u){
 			
 			fprintf(output,"%s",positionBuf);
 		}
-			else{
+		else{
 			fprintf(output,"%s",getSP(varible_u));
 		}
 	}
 	else{
 		int i;
 		for(i = 0;i < 4;i++){
-			if(!stricmp(BWtabke[i],opc))
+			if(!stricmp(ReservedWordOfByteWord[i],opc))
 				break;
 		}
 		switch (i){
 			case 0:
-					if(varible_u[0] == 'X'||varible_u[0] == 'x'){
+				if(varible_u[0] == 'X'||varible_u[0] == 'x'){
 					fprintf(output,"%c%c",varible_u[2],varible_u[3]);
 				}else if(varible_u[0] == 'C'||varible_u[0] == 'c'){
 					fprintf(output,"%02X%02X%02X",varible_u[2],varible_u[3],varible_u[4]);
 				}
 				break;
 			case 1:
-					fprintf(output,"%06X",sDtoD(varible_u));
+				fprintf(output,"%06X",sDtoD(varible_u));
 				break;
 			case 2:
 			case 3:
@@ -565,7 +568,9 @@ void opcfprintfProcess(char* varible_d,char* opc,char* varible_u){
 	
 }
 
+/*pass2*/
 void pass2(){
+	//<------LLSO process
 	input = fopen(intermediateFileName,"r");
 	output = fopen(LLSO,"w");
 	char location[5];
@@ -610,7 +615,9 @@ void pass2(){
 	
 	fclose(input);
 	fclose(output);
+	//------>LLSO process
 	
+	//<------objcode process
 	output = fopen(objcodeFileName,"w");
 	fprintf(output,"H%s\t%06X %06X",program,start,programLength);
 	int sum = 0;
@@ -645,4 +652,5 @@ void pass2(){
 	fprintf(output,"\nE%06X",start);
 	
 	fclose(output);
+	//------>objcode process
 }

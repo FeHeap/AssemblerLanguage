@@ -873,5 +873,5 @@ void pass2(){
 	Intermediate.close();
 	remove(IntermediateFileName);
 	objTable.outputToFile();
-	objTable.output();
+	//objTable.output();
 }
