@@ -45,6 +45,7 @@ void showSymbles();
 
 void pass2();
 void getAll(char*,char*,char*,char*,char*);
+char* getSP(char*);
 
 /*main function*/
 int main(void){
@@ -236,6 +237,22 @@ void showSymbles(){
 		}
 	}
 }
+char* getSP(char* symbol){
+	int index = hashcode(symbol,symbolTableSize);
+	struct symbolUnit* point = *(symbolTable + index);
+	while(point != NULL){
+		if(!stricmp(point->symbol,symbol)){  //­n°µ¨¾§b 
+			return point->position;
+		}
+		point = point->next;
+	}
+	
+	printf("the varible doesn't exist'!\n");
+	freeOptable();
+	freeSymbolTable();
+	exit(0);
+}
+
 //------>About symbol
 
 //<------About translation
@@ -257,6 +274,7 @@ int sDtoD(char* sD){
 	}
 	return num;
 }
+
 char* DtosX(int D){
 	char sX[5];
 	int i;	
@@ -307,9 +325,12 @@ int ADD(char* opc,char* varible_u){
 }
 
 char program[30] = {};
+int programEnd;
+int programLength;
 
 void pass1(){
-	int LC; 
+	int LC;
+	int start;
 	setsymbolTable();
 	if((input = fopen(sourceFileName,"r")) == NULL){
 		printf("Fail to open source!");
@@ -334,7 +355,7 @@ void pass1(){
 	
 	if(!stricmp(opc,"START")){
 		strcpy(program,varible_d);
-		LC = sXtoD(varible_u);
+		start = LC = sXtoD(varible_u);
 		fprintf(output,"%04X\t%s\t%s\t%s\n",LC,varible_d,opc,varible_u);
 	}
 	else{
@@ -383,6 +404,9 @@ void pass1(){
 		clearBuf(varible_d,opc,varible_u);
 	}while((chBuf = fgetc(input)) != EOF);
 	fprintf(output,"\t\t%s\t%s\n",opc,varible_u);
+	
+	programEnd = LC;
+	programLength = programEnd - start;
 	
 	fclose(input);
 	fclose(output);
@@ -453,6 +477,7 @@ void pass2(){
    	printf("%s\n",instruction);
    	instruction[0] = '\0';
    	chBuf = fgetc(input);
+   	
     do{
     	fscanf(input,"%[^\n]",instruction);
     	
@@ -467,10 +492,37 @@ void pass2(){
 		}
     	
     	if(exist(opc)){
-			printf("%s\n",getOPvalue(opc));
+			printf("%s",getOPvalue(opc));
+			if(strlen(varible_u) == 0){
+				printf("0000\n");
+			}
+			else if(varible_u[strlen(varible_u)-2] == ','&&(varible_u[strlen(varible_u)-1] == 'X'||varible_u[strlen(varible_u)-1] == 'x')){
+				char varible_u_buf[20];
+				strcpy(varible_u_buf,varible_u);
+				varible_u_buf[strlen(varible_u_buf)-2] = '\0';
+				char positionBuf[20];
+				strcpy(positionBuf,getSP(varible_u_buf));
+				int i;
+				for(i = 0;i < 8;i++){
+					if(positionBuf[0] <= '8'){
+						positionBuf[0] += 1;
+					}
+					else if(positionBuf[0] == '9'){
+						positionBuf[0] = 'A';
+					}
+					else{
+						positionBuf[0] += 1;
+					}
+				}
+				
+				printf("%s\n",positionBuf);
+			}
+			else{
+				printf("%s\n",getSP(varible_u));
+			}
 		}
 		else{
-			/*int i;
+			int i;
 			for(i = 0;i < 4;i++){
 				if(!stricmp(BWtabke[i],opc))
 					break;
@@ -478,22 +530,26 @@ void pass2(){
 			switch (i){
 				case 0:
 					if(varible_u[0] == 'X'||varible_u[0] == 'x'){
-						return 1;
+						printf("%c%c\n",varible_u[2],varible_u[3]);
 					}else if(varible_u[0] == 'C'||varible_u[0] == 'c'){
-						return 3;
+						printf("%02X%02X%02X\n",varible_u[2],varible_u[3],varible_u[4]);
 					}
+					break;
 				case 1:
-					return 3;
+					printf("%06X\n",sDtoD(varible_u));
+					break;
 				case 2:
-					return sDtoD(varible_u);
+					printf("\n");
+					break;
 				case 3:
-					return 3*sDtoD(varible_u);
+					printf("\n");
+					break;
 				default:
-					return -1;
-			}*/
-			printf("\n");
+					break;
+			}
 		}
     	instruction[0] = '\0';
 	}while((chBuf = fgetc(input)) != EOF);
 	
+	printf("%s\n",instruction);	
 }
