@@ -629,7 +629,7 @@ void pass2(){
 	
 	//<------objcode process
 	output = fopen(objcodeFileName,"w");							//open the objcode file with write mode
-	fprintf(output,"H%s\t%06X %06X",program,start,programLength);	//fprint the Head line 
+	fprintf(output,"H%s\t%06X%06X",program,start,programLength);	//fprint the Head line 
 	int sum = 0;
 	int len = 0;
 	struct link* point = front;
@@ -638,9 +638,8 @@ void pass2(){
 	for(;point->next != NULL;point = point->next){
 		sum = point->position - ST;
 		if(sum > 27){
-			fprintf(output," %02X",len);
+			fprintf(output,"%02X",len);
 			while(front != point){
-				fprintf(output," ");
 				opcfprintfProcess(front->varible_d,front->opc,front->varible_u);
 				deleteq();
 			}
@@ -653,9 +652,8 @@ void pass2(){
 		len += ADD(point->opc,point->varible_u);
 	}
 	len += ADD(point->opc,point->varible_u);
-	fprintf(output," %02X",len);
+	fprintf(output,"%02X",len);
 	while(front != NULL){
-		fprintf(output," ");
 		opcfprintfProcess(front->varible_d,front->opc,front->varible_u);
 		deleteq();
 	}

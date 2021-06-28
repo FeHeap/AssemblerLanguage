@@ -412,7 +412,7 @@ class pass1StringProcess{	//the function be used in pass1 and pass2
 	
 };
 
-class pass2StringProcess{//the function be used in pass2
+class pass2StringProcess{	//the function be used in pass2
 	public:
 		static char* valueGet(char* oneLine){
 			char value[maxLineLen+1];
@@ -646,7 +646,7 @@ class objectCodeProcess{	//class for objTable to process the object code file
 			ObjCode.open(ObjectCodeFileName,ios::out);	//open the Object Code File with output mode
 			
 			ObjCode << "H" << programName << "\t" << pass2StringProcess::IntTochars16_6(startAddress) ;	//fprint the Head line
-			ObjCode << " " << pass2StringProcess::IntTochars16_6(programLength) << endl;
+			ObjCode << pass2StringProcess::IntTochars16_6(programLength) << endl;
 			int sum = 0;
 			int start = pocket[0].location;	//$start is to store the start of the position of each Text line
 			int startIndex = 0;
@@ -657,10 +657,9 @@ class objectCodeProcess{	//class for objTable to process the object code file
 				sum = pocket[i].location - start;
 				if(sum > 27){
 					ObjCode << "T" << pass2StringProcess::IntTochars16_6(start);
-					ObjCode << " " << pass2StringProcess::IntTochars16_2(len) << " ";
+					ObjCode << pass2StringProcess::IntTochars16_2(len);
 					for(j = startIndex;j<i;j++){
 						fobjDispoay(pocket[j].instruction,ObjCode);
-						ObjCode << " ";
 					}
 					ObjCode << endl;
 					start = pocket[i].location;
@@ -672,10 +671,9 @@ class objectCodeProcess{	//class for objTable to process the object code file
 			}
 			
 			ObjCode << "T" << pass2StringProcess::IntTochars16_6(start);
-			ObjCode << " " << pass2StringProcess::IntTochars16_2(len) << " ";
+			ObjCode << pass2StringProcess::IntTochars16_2(len);
 			for(j = startIndex;j<i;j++){
 				fobjDispoay(pocket[j].instruction,ObjCode);
-				ObjCode << " ";
 			}
 			ObjCode << endl;
 			ObjCode << "E" << pass2StringProcess::IntTochars16_6(startAddress) << endl; //fprint the End line 
