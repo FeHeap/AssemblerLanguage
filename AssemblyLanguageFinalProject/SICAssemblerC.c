@@ -34,10 +34,10 @@ void pushOP(char*,char*);			//push the opcode into opTable
 char* getOPvalue(char*);			//according the opcode to search the opTable to get the value
 
 void pass1();								//the 1st pass of the 2-pass assembler
-void setsymbolTable(); 						//initial the symbolTable(hash map, deal with the hash collision by linked list)
+void setsymbolTable(); 						//initialize the symbolTable(hash map, deal with the hash collision by linked list)
 int pushSYM(); 								//push the symbol into the symbolTable
 void freeSymbolTable(); 					//to free the symbol table
-void freeSymbolUnit(struct symbolUnit*); 	//to free links int the bucket(in symbolTable)
+void freeSymbolUnit(struct symbolUnit*); 	//to free links in the bucket(in symbolTable)
 int sXtoD(char*);							//transform the string(Hexadecimal) into the integer(Decimal)
 int sDtoD(char*); 							//transform the string(Decimal) into the integer(Decimal)
 char* DtosX(int); 							//transform the integer(Decimal) into the string(Hexadecimal)
@@ -50,13 +50,6 @@ void getAll(char*,char*,char*,char*,char*);	//get all the information of one lin
 char* getSP(char*);							//get the position of the symbol
 void opcfprintfProcess(char*,char*,char*);	//according to varible_d, opc, varible_u to decide what the objcode the instruction will be
 
-struct link{							//to store the information of instruction for the output to objcode file
-	int position;
-	char varible_d[20]; //varible be declared
-	char opc[10];		//opcode
-	char varible_u[20];	//varible be used or imm
-	struct link* next;
-}*front,*rear;
 void addq(char*,char*,char*,char*);		//add the infromation to the queue for the output to objcode file
 void deleteq();							//delete queue
 void deleteAllq();						//free the whole queue
@@ -344,20 +337,21 @@ char program[30] = {};	//the Name of the program
 int start;				//the start position of the program
 int programEnd;			//the end of the program
 int programLength;		//the length of the program
+int startflag = 1;		//if there is START line, startflag == 1, else startflag == 0
 
 /*pass1*/
 void pass1(){
 	int LC;		//location counter
 	
-	setsymbolTable();
-	if((input = fopen(sourceFileName,"r")) == NULL){
+	setsymbolTable();	//initialize the symbolTable
+	if((input = fopen(sourceFileName,"r")) == NULL){	//open the sourceFile with read mode
 		printf("Fail to open source!");
 		exit(0);
 	}
-	output = fopen(intermediateFileName,"w");
+	output = fopen(intermediateFileName,"w");			//open the sourceFile with write mode
 	
-	char Buf[50];
-	char chBuf;
+	char Buf[50];			//to buffer the blanks and comments
+	char chBuf;				//to buffer '\n'
 	char varible_d[20];
     char opc[10];
     char varible_u[20];
@@ -368,22 +362,23 @@ void pass1(){
     	fscanf(input,"%[ \t]",Buf);
     	fscanf(input,"%[^ \t;\n]",varible_u);
     	fscanf(input,"%[^\n]",Buf);
-	}while((chBuf = fgetc(input)) != EOF&&strlen(opc) == 0);
+	}while((chBuf = fgetc(input)) != EOF&&strlen(opc) == 0);	//if it's blank line or comment line, read the next line 
 	
 	if(!stricmp(opc,"START")){	//if the START Location has been set in the program, set the $LC
 		strcpy(program,varible_d);
 		start = LC = sXtoD(varible_u);
 		fprintf(output,"%04X\t%s\t%s\t%s\n",LC,varible_d,opc,varible_u);
 	}
-	else{						//if not, set the $LC to 0 and reopen the file 
+	else{						//if not, set the $LC to 0 and reopen the sourceFile
 		LC = 0;
+		startflag = 0;			//no start line
 		fclose(input);
 		input = fopen(sourceFileName,"r");
 	}
 	
-	clearBuf(varible_d,opc,varible_u);
+	clearBuf(varible_d,opc,varible_u);	//clear buffer
 	
-	do{
+	do{	//read every line
     	fscanf(input,"%[^ \t;\n]",varible_d);
     	fscanf(input,"%[ \t]",Buf);
     	fscanf(input,"%[^ \t;\n]",opc);
@@ -394,7 +389,7 @@ void pass1(){
     	if(!stricmp("END",opc)){
     		break;
 		}
-    	if(strlen(opc) != 0){	//if the line is valid, fprint in to intermediate file
+    	if(strlen(opc) != 0){					//if the line is valid, fprint in to intermediate file
     		fprintf(output,"%04X\t%s\t%s\t%s\n",LC,varible_d,opc,varible_u);
 		}
 		else{
@@ -402,7 +397,7 @@ void pass1(){
 		}
 		
 		if(strlen(varible_d) != 0){
-			if(pushSYM(varible_d,DtosX(LC))){	//detect the bug of duplicate varible declaration
+			if(pushSYM(varible_d,DtosX(LC))){	//push the varible into the symbolTable ,and detect the bug of duplicate varible declaration
 				printf("The varible has already exist!\n");
 				freeOptable();
 				freeSymbolTable();
@@ -410,26 +405,26 @@ void pass1(){
 			}
 		}
 
-		int add = ADD(opc,varible_u);
-		if(add == -1){	//detect bug of invalid opcode
+		int add = ADD(opc,varible_u);			//According to the opc and the varible_u to decide the instruction size, which will add to the $LC
+		if(add == -1){							//detect bug of invalid opcode
 			printf("invalid instruction!\n");
 			freeOptable();
 			freeSymbolTable();
 			exit(0);
 		}
-		LC += add;
-		clearBuf(varible_d,opc,varible_u);
+		LC += add;								//Location Counter update
+		clearBuf(varible_d,opc,varible_u);		//clear the buffer
 	}while((chBuf = fgetc(input)) != EOF);
-	fprintf(output,"\t\t%s\t%s\n",opc,varible_u);
+	fprintf(output,"\t\t%s\t%s\n",opc,varible_u);	//the END Line
 	
-	programEnd = LC;
-	programLength = programEnd - start;
+	programEnd = LC;						//store the end position of the program
+	programLength = programEnd - start;		//store the length of the program
 	
-	fclose(input);
-	fclose(output);
+	fclose(input);		//close souse file
+	fclose(output);		//close intermediate file
 }
 
-void getAll(char* instruction,char* location,char* varible_d,char* opc,char* varible_u){
+void getAll(char* instruction,char* location,char* varible_d,char* opc,char* varible_u){	//analyze one line instruction to assign the information to the buffer respectively
 	if(instruction[4] == '\t'&&instruction[5] == '\t'){
 		int i = 0,j = 0;
 		for(;instruction[i] != '\t'&&instruction[i] != ' ';i++,j++){
@@ -480,7 +475,17 @@ void getAll(char* instruction,char* location,char* varible_d,char* opc,char* var
 	}
 }
 
-void addq(char* location,char* varible_d,char* opc,char* varible_u){
+//<------queue
+
+struct link{							//to store the information of instruction for the output to objcode file
+	int position;
+	char varible_d[20]; //varible be declared
+	char opc[10];		//opcode
+	char varible_u[20];	//varible be used or imm
+	struct link* next;
+}*front,*rear;
+
+void addq(char* location,char* varible_d,char* opc,char* varible_u){ //add the infromation to the queue for the output to objcode file
 	if(front == NULL){
 		front = rear = (struct link*)malloc(sizeof(struct link));
 		rear->position = sXtoD(location);
@@ -500,18 +505,20 @@ void addq(char* location,char* varible_d,char* opc,char* varible_u){
 	}
 }
 
-void deleteq(){
+void deleteq(){		//delete queue
 	struct link* temp = front;
 	front = front->next;
 	free(temp);
 }
-void deleteAllq(){
+
+void deleteAllq(){	//free the whole queue
 	if(front != NULL){
 		deleteq();
 	}
 }
+//------>queue
 
-void opcfprintfProcess(char* varible_d,char* opc,char* varible_u){
+void opcfprintfProcess(char* varible_d,char* opc,char* varible_u){	//according to varible_d, opc, varible_u to decide the object code to output to the file
 	if(exist(opc)){
 		fprintf(output,"%s",getOPvalue(opc));
 		if(strlen(varible_u) == 0){
@@ -571,30 +578,33 @@ void opcfprintfProcess(char* varible_d,char* opc,char* varible_u){
 /*pass2*/
 void pass2(){
 	//<------LLSO process
-	input = fopen(intermediateFileName,"r");
-	output = fopen(LLSO,"w");
+	input = fopen(intermediateFileName,"r");	//open the intermediate file with read mode
+	output = fopen(LLSO,"w");					//open the LLSO file with write mode
 	char location[5];
-	char Buf[50];
 	char chBuf;
 	char varible_d[20];
     char opc[10];
     char varible_u[20];
     char instruction[100];
     
-    fscanf(input,"%[^\n]",instruction);
-   	fprintf(output,"%s\n",instruction);
-   	instruction[0] = '\0';
-   	chBuf = fgetc(input);
+    if(startflag){
+	    fscanf(input,"%[^\n]",instruction); //read the START line
+	   	fprintf(output,"%s\n",instruction);	//output the START line to the LLSO file
+	   	instruction[0] = '\0';				//initialize the instruction buffer
+	   	chBuf = fgetc(input);				//buffer the '\n'
+	}
    	
-   	front = NULL;
-   	rear = NULL;
+   	front = NULL;	//initialize the front point to NULL
+   	rear = NULL;	//initialize the rear point to NULL
    	
     do{
-    	fscanf(input,"%[^\n]",instruction);
+    	fscanf(input,"%[^\n]",instruction);	//read every line from the intermediate file
     	
     	getAll( instruction, location, varible_d, opc, varible_u);
-		if(instruction[0] == '\t')
+    	
+		if(instruction[0] == '\t')	//break, if read END line
     		break;
+    		
     	if(strlen(varible_u) < 8){
     		fprintf(output,"%s\t\t",instruction);
 		}
@@ -603,27 +613,27 @@ void pass2(){
 		}
 		
 		if(stricmp(opc,"RESW")&&stricmp(opc,"RESB")){
-			addq(location,varible_d,opc,varible_u);
+			addq(location,varible_d,opc,varible_u);		//add the information of each instruction into queue except "RESW" "RESB"
 		}
-    	opcfprintfProcess(varible_d,opc,varible_u);
+    	opcfprintfProcess(varible_d,opc,varible_u);		//fprintf the object code
     	
 		fprintf(output,"\n");
-    	instruction[0] = '\0';
+    	instruction[0] = '\0';							//initialize the instruction buffer
 	}while((chBuf = fgetc(input)) != EOF);
 	
-	fprintf(output,"%s\n",instruction);
+	fprintf(output,"%s\n",instruction);		//output the END line to the LLSO file
 	
-	fclose(input);
-	fclose(output);
+	fclose(input);				//close the intermediate file
+	fclose(output);				//close the LLSO file
 	//------>LLSO process
 	
 	//<------objcode process
-	output = fopen(objcodeFileName,"w");
-	fprintf(output,"H%s\t%06X %06X",program,start,programLength);
+	output = fopen(objcodeFileName,"w");							//open the objcode file with write mode
+	fprintf(output,"H%s\t%06X %06X",program,start,programLength);	//fprint the Head line 
 	int sum = 0;
 	int len = 0;
 	struct link* point = front;
-	int ST = front->position;
+	int ST = front->position;	//ST is to store the start of the position of each Text line
 	fprintf(output,"\nT%06X",point->position);
 	for(;point->next != NULL;point = point->next){
 		sum = point->position - ST;
@@ -649,7 +659,7 @@ void pass2(){
 		opcfprintfProcess(front->varible_d,front->opc,front->varible_u);
 		deleteq();
 	}
-	fprintf(output,"\nE%06X",start);
+	fprintf(output,"\nE%06X",start);	//fprint the End line 
 	
 	fclose(output);
 	//------>objcode process

@@ -2,11 +2,11 @@
 #include <cstdlib>
 #include <fstream>
 #include <cstring>
-#define numOfEngAlph 26 //the number of the english alphabet
-#define maxVarLen 247
-#define maxLineLen 500
+#define numOfEngAlph 26	//the number of the english alphabet
+#define maxVarLen 247 	//the max length of the name of varible 
+#define maxLineLen 500	//the max length of one line of program
 #define OPCodeFileName "opcode.txt"
-#define SourceFileName "source(comment&blank).txt"
+#define SourceFileName "source.txt"
 #define IntermediateFileName "Intermediate.txt"
 #define OutcomeFileName "outcome.txt"
 #define ObjectCodeFileName "objectcode.txt" 
@@ -15,27 +15,27 @@ ifstream  Source;
 fstream Intermediate;
 ofstream ObjCode, Outcome;
 
-int startAddress,programLength;
-char programName[40];
+int startAddress,programLength; //the start address of the program and the length of the program
+char programName[40];			//the name of the program
 
-class opcProcess{
+class opcProcess{	//class for opcTable
 	
 	private:
 		
 		struct TableUnit{
-			char assemblyInst[8];
-			int code;
+			char opcode[8];	//opcode
+			int value;				//the value of opcode
 			struct TableUnit *next;
 		}*table;
 		
-		int disOpcData(char* &opcData){
+		int disOpcData(char* &opcData){	//to seperate the opcode and the value in one line of OPCodeFile
 			int cut;
 			for(cut = 0; opcData[cut] != ' '; cut++);
 			opcData[cut] = '\0';
 			return cut+1;
 		}
 		
-		int chars16ToInt(char* &charArray,int i){
+		int chars16ToInt(char* &charArray,int i){	//transform the string(Hexadecimal) into the integer(Decimal)
 			int num = 0;
 			for(; charArray[i] != '\0';i++){
 				num *= 16;
@@ -44,7 +44,7 @@ class opcProcess{
 			return num;
 		}
 		
-		void freeLink(TableUnit* point){
+		void freeLink(TableUnit* point){	//to free links in the bucket(in opcTable)
 			if(point->next != NULL){
 				freeLink(point->next);
 			}
@@ -53,15 +53,15 @@ class opcProcess{
 		
 	public:
 		
-		opcProcess(){
+		opcProcess(){	//initialize the object of this class
 			table = new struct TableUnit[numOfEngAlph];
 			for(int i  = 0; i < numOfEngAlph; i++){
-				table[i].code = -1;
+				table[i].value = -1;
 				table[i].next = NULL;
 			}
 		}
 		
-		~opcProcess(){
+		~opcProcess(){	//free the table and it's links
 			for(int i = 0; i < numOfEngAlph; i++){
 				if(table[i].next != NULL)
 					freeLink(table[i].next);
@@ -69,11 +69,11 @@ class opcProcess{
 			delete [] table;
 		}
 		
-		void put(char* Code){
+		void put(char* Code){	//put the opcode in the table
 			int codeStart = disOpcData(Code);
-			if(table[Code[0] - 'A'].code == -1){
-				strcpy(table[Code[0] - 'A'].assemblyInst,Code);
-				table[Code[0] - 'A'].code = chars16ToInt(Code,codeStart);
+			if(table[Code[0] - 'A'].value == -1){
+				strcpy(table[Code[0] - 'A'].opcode,Code);
+				table[Code[0] - 'A'].value = chars16ToInt(Code,codeStart);
 			}
 			else{
 				struct TableUnit* point = &table[Code[0] - 'A'];
@@ -82,17 +82,17 @@ class opcProcess{
 				}
 				point -> next = new struct TableUnit;
 				point = point -> next;
-				strcpy(point -> assemblyInst,Code);
-				point -> code = chars16ToInt(Code,codeStart);
+				strcpy(point -> opcode,Code);
+				point -> value = chars16ToInt(Code,codeStart);
 				point -> next = NULL;
 			}	
 		}
 		
-		int codeValue(char *instruction){
-			struct TableUnit* point = &table[instruction[0] - 'A'];
+		int codeValue(char *opcode){	//according to the input $opcode to search the table to get the the value
+			struct TableUnit* point = &table[opcode[0] - 'A'];
 			while(point != NULL){
-				if(!stricmp(point -> assemblyInst,instruction)){
-					return point -> code;
+				if(!stricmp(point -> opcode,opcode)){
+					return point -> value;
 				}
 				else{
 					point = point -> next;
@@ -100,13 +100,13 @@ class opcProcess{
 			}
 			return -1;
 		}
-		void viewOpCode(){
+		void viewOpCode(){	//show the whole table
 			cout << "opcode Table:\n" << endl;
 			for(int i = 0; i < numOfEngAlph;i++){
-				if(table[i].code != -1){
+				if(table[i].value != -1){
 					struct TableUnit* point = &table[i];
 					while(point != NULL){
-						printf("%s\t%02X\n",point->assemblyInst,point->code);
+						printf("%s\t%02X\n",point->opcode,point->value);
 						point = point->next;
 					}
 				}	
@@ -114,17 +114,17 @@ class opcProcess{
 		}	
 }opcTable;
 
-class symbolProcess{
+class symbolProcess{	//class for symbolTable
 	
 	private:
 		
 		struct TableUnit{
 			char symbol[maxVarLen+1];
-			int line;
+			int position;
 			struct TableUnit *next;
 		}*table;
 		
-		int chars16ToInt(char* &charArray,int i = 0){
+		int chars16ToInt(char* &charArray,int i = 0){	//transform the string(Hexadecimal) into the integer(Decimal)
 			int num = 0;
 			for(; charArray[i] != '\0';i++){
 				num *= 16;
@@ -133,7 +133,7 @@ class symbolProcess{
 			return num;
 		}
 		
-		void freeLink(TableUnit* point){
+		void freeLink(TableUnit* point){	//to free links in the bucket(in symbolTable)
 			if(point->next != NULL){
 				freeLink(point->next);
 			}
@@ -142,15 +142,15 @@ class symbolProcess{
 		
 	public:
 		
-		symbolProcess(){
+		symbolProcess(){	//initialize the object of this class
 			table = new struct TableUnit[numOfEngAlph];
 			for(int i  = 0; i < numOfEngAlph; i++){
-				table[i].line = -1;
+				table[i].position = -1;
 				table[i].next = NULL;
 			}
 		}
 		
-		~symbolProcess(){
+		~symbolProcess(){	//free the table and it's links
 			for(int i = 0; i < numOfEngAlph; i++){
 				if(table[i].next != NULL)
 					freeLink(table[i].next);
@@ -158,10 +158,10 @@ class symbolProcess{
 			delete [] table;
 		}
 		
-		bool put(char* symbol,int line){ //duplicate varible declare return true, else return false
-			if(table[(symbol[0] - 'A')%numOfEngAlph].line == -1){
+		bool put(char* symbol,int position){ //put the value into the symbolTable, and detect the bug duplicate varible declare,if occur return true, else return false
+			if(table[(symbol[0] - 'A')%numOfEngAlph].position == -1){
 				strcpy(table[(symbol[0] - 'A')%numOfEngAlph].symbol,symbol);
-				table[(symbol[0] - 'A')%numOfEngAlph].line = line;
+				table[(symbol[0] - 'A')%numOfEngAlph].position = position;
 				return false;
 			}
 			else{
@@ -178,17 +178,17 @@ class symbolProcess{
 				point -> next = new struct TableUnit;
 				point = point -> next;
 				strcpy(point -> symbol,symbol);
-				point -> line = line;
+				point -> position = position;
 				point -> next = NULL;
 				return false;
 			}	
 		}
 		
-		int codeValue(char *symbol){ //when find the symbol retrun the position it is, else return -1
+		int codeValue(char *symbol){ //according to the input $symbol to find it's position, if find the symbol retrun the position it is, else return -1
 			struct TableUnit* point = &table[(symbol[0] - 'A')%numOfEngAlph];
 			while(point != NULL){
 				if(!stricmp(point -> symbol,symbol)){
-					return point -> line;
+					return point -> position;
 				}
 				else{
 					point = point -> next;
@@ -197,13 +197,13 @@ class symbolProcess{
 			return -1;
 		}
 		
-		void viewSymbols(){
+		void viewSymbols(){	//show the whole table
 			cout << "Symbol Table:\n" << endl;
 			for(int i = 0; i < numOfEngAlph;i++){
-				if(table[i].line != -1){
+				if(table[i].position != -1){
 					struct TableUnit* point = &table[i];
 					while(point != NULL){
-						printf("%s\t%02X\n",point->symbol,point->line);
+						printf("%s\t%02X\n",point->symbol,point->position);
 						point = point->next;
 					}
 				}	
@@ -211,37 +211,37 @@ class symbolProcess{
 		}
 }symbolTable;
 
-class FSMofInst{
+class FSMofInst{	//to analyze the information of one line in source by Finite State Machine
 	private:
 		struct state{
-			char state;
-			char contain[maxVarLen+1];
-			int top;
+			char state;					//state's name
+			char content[maxVarLen+1];	//buffer to store the string
+			int top;					//the top point of buffer
 		}*point,var_state,op_state,val_state,b1_state,b2_state,E_state;
 		
 		bool byteFlag;
 		
 		void set(char C){
-			point->contain[point->top++] = C;
-			point->contain[point->top] = '\0';
+			point->content[point->top++] = C;
+			point->content[point->top] = '\0';
 		}
 	
 	public:
 		FSMofInst(){
 
-			var_state.state = 'r';
+			var_state.state = 'r';	//varible state
 			
-			b1_state.state = 'S';
+			b1_state.state = 'S';	//the 1st blank state
 			
-			op_state.state = 'o';
+			op_state.state = 'o';	//opcode state
 			
-			b2_state.state = 'X';
+			b2_state.state = 'X';	//the 2nd blank state
 			
-			val_state.state = 'l';
+			val_state.state = 'l';	//the value state
 			
-			E_state.state = 'E';
+			E_state.state = 'E';	//the end state
 		}
-		void process(char* str){
+		void process(char* str){	//run the FSM
 			int i = 0;
 			while(point->state != 'E'){
 				switch (point->state){
@@ -305,30 +305,30 @@ class FSMofInst{
 			}
 		}
 		
-		void reset(){
+		void reset(){	//reset all the state, and point to the start state $var_state
 			byteFlag = false;
 			point = &var_state;
-			var_state.contain[0] = '\0';
+			var_state.content[0] = '\0';
 			var_state.top = 0;
-			op_state.contain[0] = '\0';
+			op_state.content[0] = '\0';
 			op_state.top = 0;
-			val_state.contain[0] = '\0';
+			val_state.content[0] = '\0';
 			val_state.top = 0;
 		}
 		void setVar(char* str){
-			strcpy(str,var_state.contain);
+			strcpy(str,var_state.content);
 		}
 		void setOp(char* str){
-			strcpy(str,op_state.contain);
+			strcpy(str,op_state.content);
 		}
 		void setVal(char* str){
-			strcpy(str,val_state.contain);
+			strcpy(str,val_state.content);
 		}		
 }FSM;
 
-class pass1StringProcess{
+class pass1StringProcess{	//the function be used in pass1 and pass2
 	public:
-		static bool CommentOrBlank(char* oneLine){
+		static bool CommentOrBlank(char* oneLine){	//if it's comment line or blank line return true, else return false
 			for(int i = 0; i <= strlen(oneLine); i++){
 				if(oneLine[i] == ' '||oneLine[i] == '\t'){
 					continue;
@@ -340,21 +340,22 @@ class pass1StringProcess{
 			}
 			return false;
 		}
-		static char* varGet(char* oneLine){
+		
+		static char* varGet(char* oneLine){	//undefine
 			
 		}
-		static char* opGet(char* oneLine){
+		static char* opGet(char* oneLine){	//undefine	
 			
 		}
 		
-		static void disOneLine(char* oneLine,char* var,char* op,char* value){
+		static void disOneLine(char* oneLine,char* var,char* op,char* value){ //analyze one line to assign the information to the buffer respectively
 			FSM.reset();
 			FSM.process(oneLine);
 			FSM.setVar(var);
 			FSM.setOp(op);
 			FSM.setVal(value);
 		}
-		static int chars16ToInt(char* charArray){
+		static int chars16ToInt(char* charArray){	//transform the string(Hexadecimal) into the integer(Decimal)
 			int num = 0;
 			for(int i = 0; charArray[i] != '\0';i++){
 				num *= 16;
@@ -362,7 +363,7 @@ class pass1StringProcess{
 			}
 			return num;
 		}
-		static char* IntTochars16_L(int num){
+		static char* IntTochars16_L(int num){		//transform the integer(Decimal) into the string(Hexadecimal);  L:Location Counter
 			char charArray[5];
 			charArray[4] = '\0'; 
 			for(int i = 3; i >= 0; i--){
@@ -371,7 +372,7 @@ class pass1StringProcess{
 			}
 			return charArray;
 		}
-		static int chars10ToInt(char* charArray){
+		static int chars10ToInt(char* charArray){	//transform the string(Decimal) into the integer(Decimal)
 			int num = 0;
 			for(int i = 0; charArray[i] != '\0';i++){
 				num *= 10;
@@ -379,7 +380,8 @@ class pass1StringProcess{
 			}
 			return num;
 		}
-		static bool countAndCheck(int &locationCounter,char* op,char* value){
+		
+		static bool countAndCheck(int &locationCounter,char* op,char* value){ //according the input $op, $value to add the size of the instruction to $locationCounter
 			if(opcTable.codeValue(op) == -1){
 				if(!stricmp("BYTE",op) && strlen(value) != 0){
 					if(value[0] == 'X'||value[0] == 'x'){
@@ -399,7 +401,7 @@ class pass1StringProcess{
 					locationCounter += 3*chars10ToInt(value);
 				}
 				else{
-					return true;
+					return true;	//if the $opc is valid return true, else return false 
 				}
 			}
 			else{
@@ -410,7 +412,7 @@ class pass1StringProcess{
 	
 };
 
-class pass2StringProcess{
+class pass2StringProcess{//the function be used in pass2
 	public:
 		static char* valueGet(char* oneLine){
 			char value[maxLineLen+1];
@@ -419,6 +421,7 @@ class pass2StringProcess{
 			FSM.setVal(value);
 			return value;
 		}
+		
 		static char* opGet(char* oneLine){
 			char op[8];
 			FSM.reset();
@@ -428,7 +431,7 @@ class pass2StringProcess{
 		}
 		
 		
-		static char* opLocation(char* oneLine){
+		static char* locationGet(char* oneLine){
 			char location[5];
 			for(int i = 0;i < 4;i++){
 				location[i] = oneLine[i];
@@ -436,7 +439,8 @@ class pass2StringProcess{
 			location[4] = '\0';
 			return location;
 		}
-		static void count(int &locationCounter,char* op,char* value){
+		
+		static void count(int &locationCounter,char* op,char* value){	//according the input $op, $value to add the size of the instruction to $locationCounter
 			if(opcTable.codeValue(op) == -1){
 				if(!stricmp("BYTE",op)){
 					if(value[0] == 'X'||value[0] == 'x'){
@@ -460,7 +464,8 @@ class pass2StringProcess{
 				locationCounter += 3;
 			}
 		}
-		static char* IntTochars16_2(int num){
+		
+		static char* IntTochars16_2(int num){	//transform the integer(Decimal) into the string(Hexadecimal);
 			char charArray[3];
 			charArray[2] = '\0'; 
 			for(int i = 1; i >= 0; i--){
@@ -469,7 +474,8 @@ class pass2StringProcess{
 			}
 			return charArray;
 		}
-		static char* IntTochars16_6(int num){
+		
+		static char* IntTochars16_6(int num){	//transform the integer(Decimal) into the string(Hexadecimal);
 			char charArray[7];
 			charArray[6] = '\0'; 
 			for(int i = 5; i >= 0; i--){
@@ -480,7 +486,7 @@ class pass2StringProcess{
 		}
 };
 
-class objectCodeProcess{
+class objectCodeProcess{	//class for objTable to process the object code file
 	private:
 		struct instructions{
 			char* instruction;
@@ -503,7 +509,7 @@ class objectCodeProcess{
 			delete [] pocket;
 		}
 		
-		static void	objDispoay(char* instruction){
+		static void	objDispoay(char* instruction){	//according to the instruction to output the objcode on screen
 			char var[maxVarLen+1];
 			char op[8];
 			char value[maxVarLen+1];
@@ -554,7 +560,7 @@ class objectCodeProcess{
 			
 			}
 		}
-		static void	fobjDispoay(char* instruction,ofstream &fout){
+		static void	fobjDispoay(char* instruction,ofstream &fout){	//according to the $instruction to output the objcode to file fout
 			char var[maxVarLen+1];
 			char op[8];
 			char value[maxVarLen+1];
@@ -608,7 +614,8 @@ class objectCodeProcess{
 			
 			}
 		} 
-		static char* getInstruction(char* oneLine){
+		
+		static char* getInstruction(char* oneLine){	//get the Instruction part from a line read from Intermediate file
 			char lineBuf[maxLineLen+1];
 			int j = 0;
 			for(int i = 5;oneLine[i] != '\0';i++,j++){
@@ -617,7 +624,8 @@ class objectCodeProcess{
 			lineBuf[j] = '\0';
 			return lineBuf;
 		}
-		void push(char* instruction,int location){
+		
+		void push(char* instruction,int location){ //push into the data structure
 			if(top == basicSize){
 				struct instructions* temp = pocket;
 				basicSize *= 2;
@@ -634,13 +642,13 @@ class objectCodeProcess{
 			top++;
 		}
 		
-		void outputToFile(){
-			ObjCode.open(ObjectCodeFileName,ios::out);
+		void outputToFile(){	//genarate the ObjCode file
+			ObjCode.open(ObjectCodeFileName,ios::out);	//open the Object Code File with output mode
 			
-			ObjCode << "H" << programName << "\t" << pass2StringProcess::IntTochars16_6(startAddress) ;
+			ObjCode << "H" << programName << "\t" << pass2StringProcess::IntTochars16_6(startAddress) ;	//fprint the Head line
 			ObjCode << " " << pass2StringProcess::IntTochars16_6(programLength) << endl;
 			int sum = 0;
-			int start = pocket[0].location;
+			int start = pocket[0].location;	//$start is to store the start of the position of each Text line
 			int startIndex = 0;
 			int len = 0;
 			char instructionBuf[maxLineLen+1];
@@ -670,16 +678,16 @@ class objectCodeProcess{
 				ObjCode << " ";
 			}
 			ObjCode << endl;
-			ObjCode << "E" << pass2StringProcess::IntTochars16_6(startAddress) << endl;
+			ObjCode << "E" << pass2StringProcess::IntTochars16_6(startAddress) << endl; //fprint the End line 
 			ObjCode.close();
 		}
 		
-		void output(){
+		void output(){	//not genarate the ObjCode file, but show on screen
 
-			printf("H%s\t%06X %06X\n",programName,startAddress,programLength);
+			printf("H%s\t%06X %06X\n",programName,startAddress,programLength);	//print the Head line
 			
 			int sum = 0;
-			int start = pocket[0].location;
+			int start = pocket[0].location;	//$start is to store the start of the position of each Text line
 			int startIndex = 0;
 			int len = 0;
 			char instructionBuf[maxLineLen+1];
@@ -707,7 +715,7 @@ class objectCodeProcess{
 				printf(" ");
 			}
 			printf("\n");
-			printf("E%06X\n",startAddress);
+			printf("E%06X\n",startAddress);	//print the End line 
 		}
 }objTable;
 
@@ -732,7 +740,7 @@ int main(void){
     return 0;
 }
 
-void setOpCode(){
+void setOpCode(){ //read OpCode file to set opcTable
 	ifstream OpCode;
     OpCode.open(OPCodeFileName,ios::in);
     if(OpCode.is_open()){
@@ -749,11 +757,12 @@ void setOpCode(){
 	}
 }
 
+ /*the 1st pass*/
 void pass1(){
 	int locationCounter;
-	char instructionBuf[maxLineLen+1];
-	Source.open(SourceFileName,ios::in);
-	Intermediate.open(IntermediateFileName,ios::out);
+	char instructionBuf[maxLineLen+1];		//the buffar of a line of instruction
+	Source.open(SourceFileName,ios::in);	//open the source file with input mode
+	Intermediate.open(IntermediateFileName,ios::out);	//open the Intermediate file with output mode
 	
 	if(!Source.is_open()){ //check if the file open
 		cout << "Fail to open the file Source!" << endl;
@@ -761,6 +770,7 @@ void pass1(){
 		remove(IntermediateFileName);
 		exit(0);
 	}
+	
 	char var[maxVarLen+1];
 	char op[8];
 	char value[maxVarLen+1];
@@ -771,12 +781,12 @@ void pass1(){
 			continue;
 		}
 		pass1StringProcess::disOneLine(instructionBuf,var,op,value);
-		if(!stricmp(op,"START")){
+		if(!stricmp(op,"START")){	//if there is START line in the source file, set the locationCounter which the program assigns
 			strcpy(programName,var);
 			startAddress = locationCounter = pass1StringProcess::chars16ToInt(value);
 			Intermediate << pass1StringProcess::IntTochars16_L(locationCounter) << "\t" << var << "\t" << op << "\t" << value << endl;
 		}
-		else{
+		else{						//if not, set the locationCounter = 0, and reopen the file
 			programName[0] = '\0';
 			startAddress = locationCounter = 0;
 			Source.close();
@@ -785,16 +795,17 @@ void pass1(){
 		break;
 	}
 	
-	while(!Source.eof()){
+	while(!Source.eof()){	//read each line in the source file
 		Source.getline(instructionBuf,maxLineLen,'\n');
-		if(pass1StringProcess::CommentOrBlank(instructionBuf)){
+		if(pass1StringProcess::CommentOrBlank(instructionBuf)){ //if it's comment line or blank line, continue
 			continue;
 		}
 		pass1StringProcess::disOneLine(instructionBuf,var,op,value);
-		if(!stricmp(op,"END"))
+		if(!stricmp(op,"END"))		//if it's END line, break
 			break;
 		Intermediate << pass1StringProcess::IntTochars16_L(locationCounter) << "\t" << var << "\t" << op << "\t" << value << endl;
-		if(var[0] != '\0'){
+		
+		if(var[0] != '\0'){	//detect the bug about varible declaration
 			if(!((var[0] >= 'A'&&var[0]<='Z')||var[0] == '_'||var[0] == '?'||var[0] =='$')||strlen(var) > maxVarLen){
 				cout << "valid varible declaration!" << endl;
 				Source.close();
@@ -819,7 +830,7 @@ void pass1(){
 				exit(0);
 			}
 		}
-		if(pass1StringProcess::countAndCheck(locationCounter, op, value)){
+		if(pass1StringProcess::countAndCheck(locationCounter, op, value)){ //detect the bug valid instruction
 			cout << "valid instruction!" << endl;
 			Source.close();
 			Intermediate.close();
@@ -830,12 +841,13 @@ void pass1(){
 	}
 	
 	Intermediate << "\t" << var << "\t" << op << "\t" << value << endl; //END line
-	programLength = locationCounter - startAddress;
+	programLength = locationCounter - startAddress;	//set programLength
 	
 	Source.close();
 	Intermediate.close();
 }
-void showIntermediate(){
+
+void showIntermediate(){	//read the Intermediate file
 	cout << "Intermediate file:\n" << endl;
 	Intermediate.open(IntermediateFileName,ios::in);
 	while(!Intermediate.eof()){
@@ -846,12 +858,15 @@ void showIntermediate(){
 	Intermediate.close();
 }
 
+ /*the 2nd pass*/
 void pass2(){
-	Intermediate.open(IntermediateFileName,ios::in);
-	Outcome.open(OutcomeFileName,ios::out);
+	
+	Intermediate.open(IntermediateFileName,ios::in);	//open the Intermediate File with input mode
+	Outcome.open(OutcomeFileName,ios::out);				//open the Outcome file with output mode
 	
 	char* opBuf;
-	while(!Intermediate.eof()){
+	while(!Intermediate.eof()){ //read each line of Intermediate File
+	
 		char charArrayBuf[maxLineLen+1];
 		Intermediate.getline(charArrayBuf,maxLineLen,'\n');
 		if(strlen(pass2StringProcess::valueGet(objectCodeProcess::getInstruction(charArrayBuf))) < 8){
@@ -861,17 +876,20 @@ void pass2(){
 			Outcome << charArrayBuf << "\t";
 		}
 		char* instructionBuf = new char[maxLineLen+1];
-		strcpy(instructionBuf,objectCodeProcess::getInstruction(charArrayBuf));
-		opBuf = pass2StringProcess::opGet(instructionBuf);
+		strcpy(instructionBuf,objectCodeProcess::getInstruction(charArrayBuf));	//buff the instruction in $instructionBuf
+		opBuf = pass2StringProcess::opGet(instructionBuf);						//get it's opcode
+		
 		if(stricmp("RESW",opBuf) && stricmp("RESB",opBuf) && stricmp("START",opBuf) && stricmp("END",opBuf)){
-			objTable.push(instructionBuf,pass1StringProcess::chars16ToInt(pass2StringProcess::opLocation(charArrayBuf)));
+			objTable.push(instructionBuf,pass1StringProcess::chars16ToInt(pass2StringProcess::locationGet(charArrayBuf))); //push the instruction into objTable
 		}
-		objectCodeProcess::fobjDispoay(instructionBuf,Outcome);
+		
+		objectCodeProcess::fobjDispoay(instructionBuf,Outcome);	//according to the $instructionBuf to output the objcode to Outcome file
 		Outcome << endl;
 	}
+	
 	Outcome.close();
 	Intermediate.close();
-	remove(IntermediateFileName);
-	objTable.outputToFile();
+	remove(IntermediateFileName); //remove the Intermediate File
+	objTable.outputToFile(); //generate the object code file
 	//objTable.output();
 }
