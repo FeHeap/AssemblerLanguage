@@ -8,9 +8,9 @@ void shuffle(T &Array){	//Knuth shuffle
 	
 	srand(time(NULL));
 	int range = sizeof(Array)/sizeof(Array[0]); 
-	for(int i = 1,buf; i < 100;i++){
+	for(int buf; range > 0;){
 		buf = rand()%range;
-		swap(Array[buf],Array[range-i]);
+		swap(Array[buf],Array[--range]);
 	}
 }
 
